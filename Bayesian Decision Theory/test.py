@@ -49,6 +49,10 @@ def main():
     class_label, confidence, error = classifier.classify(point)
     print(f"Point {point} classified into class {class_label}, with confidence: {confidence:.4f} and probability of error: {error:.4f}")
     
+    #Plot likelihoods:
+    classifier.plot_likelihoods(range=(-10, 10))
+    classifier.plot_posteriors(range=(-10, 10))
+    
 
 if __name__ == "__main__":
     main()

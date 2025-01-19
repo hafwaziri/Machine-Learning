@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import quad
+import matplotlib.pyplot as plt
 
 class BayesianClassifier:
     
@@ -16,9 +17,6 @@ class BayesianClassifier:
         self.prior_class1 = prior_class1
         self.likelihood_class2 = likelihood_class2
         self.prior_class2 = prior_class2
-    
-    #TODO: Plotting function for class-conditional probability density functions (p(x|wi), likelihood)
-    #TODO: Plotting function for posterior probability
     
     # Overall Probability of x
     def evidence(self, x):
@@ -66,3 +64,36 @@ class BayesianClassifier:
         accuracy = np.mean(np.array(predictions) == y_true)
         
         return accuracy
+    
+    def plot_likelihoods(self, range):
+        
+        x = np.linspace(range[0], range[1], 1000)
+        likelihood1_values = [self.likelihood_class1(xi) for xi in x]
+        likelihood2_values = [self.likelihood_class2(xi) for xi in x]
+        
+        plt.figure(figsize=(18,8))
+        plt.plot(x, likelihood1_values, 'b-', label="Class 1")
+        plt.plot(x, likelihood2_values, 'r-', label="Class 2")
+        plt.xlabel('x')
+        plt.xticks(np.arange(range[0], range[1] + 0.5, 0.5))
+        plt.ylabel('Probability Density')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.savefig('likelihoods.png', bbox_inches='tight')
+        plt.close()
+        
+    def plot_posteriors(self, range):
+        x = np.linspace(range[0], range[1], 1000)
+        posterior1_values = [self.posterior(xi, 1) for xi in x]
+        posterior2_values = [self.posterior(xi, 2) for xi in x]
+        
+        plt.figure(figsize=(18,8))
+        plt.plot(x, posterior1_values, 'b-', label="Class 1")
+        plt.plot(x, posterior2_values, 'r-', label="Class 2")
+        plt.xlabel('x')
+        plt.xticks(np.arange(range[0], range[1] + 0.5, 0.5))
+        plt.ylabel('Posteriors')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.savefig('posteriors.png', bbox_inches='tight')
+        plt.close()
