@@ -9,32 +9,29 @@ import numpy as np
 def create_likelihood(mean, std):
     return lambda x: norm.pdf(x, mean, std)
 
-def generate_test_data(n_samples, mean1, std1, mean2, std2):
+def generate_test_data(n_samples, means, stds):
     
-    class1_samples = np.random.normal(mean1, std1, n_samples)
+    samples = []
+    for mean, std in zip(means, stds):
+        class_samples = np.random.normal(mean, std, n_samples)
+        samples.append(class_samples)
     
-    class2_samples = np.random.normal(mean2, std2, n_samples)
-    
-    X = np.concatenate([class1_samples, class2_samples])
-    y = np.concatenate([np.ones(n_samples), np.ones(n_samples)*2])
+    X = np.concatenate(samples)
+    y = np.concatenate([np.ones(n_samples) * (i + 1) for i in range(len(means))])
     
     return X, y
 
-
 def main():
     
-    mean1, std1 = 0, 1
-    mean2, std2 = 2, 1
+    means = [0, 2, 4]
+    stds = [1, 1, 1]
     
-    likelihood1 = create_likelihood(mean1, std1)
-    likelihood2 = create_likelihood(mean2, std2)
+    likelihoods = [create_likelihood(mean, std) for mean, std in zip(means, stds)]
+    priors = [0.3, 0.3, 0.4]
     
-    classifier = BayesianClassifier(likelihood_class1=likelihood1,
-                                    prior_class1=0.5,
-                                    likelihood_class2=likelihood2,
-                                    prior_class2=0.5)
+    classifier = BayesianClassifier(likelihoods, priors)
     
-    X_test, y_test = generate_test_data(1000, mean1, std1, mean2, std2)
+    X_test, y_test = generate_test_data(1000, means, stds)
     
     # Evaluate Classifier:
     accuracy = classifier.evaluate_classifier(X_test, y_test)
@@ -44,14 +41,17 @@ def main():
     error_rate = classifier.p_error()
     print(f"Theoretical error rate: {error_rate:.4f}")
     
-    # Classify 1 point:
-    point = 0.5
-    class_label, confidence, error = classifier.classify(point)
-    print(f"Point {point} classified into class {class_label}, with confidence: {confidence:.4f} and probability of error: {error:.4f}")
+    test_points = [1, 2, 3]
+    for point in test_points:
+        class_label, confidence, error = classifier.classify(point)
+        print(f"\nPoint {point:.1f}:")
+        print(f"  Classified as class {class_label}")
+        print(f"  Confidence: {confidence:.4f}")
+        print(f"  Probability of error: {error:.4f}")
     
-    #Plot likelihoods:
-    classifier.plot_likelihoods(range=(-10, 10))
-    classifier.plot_posteriors(range=(-10, 10))
+    #Plot likelihoods & posteriors:
+    classifier.plot_likelihoods(range_=(-10, 10))
+    classifier.plot_posteriors(range_=(-10, 10))
     
 
 if __name__ == "__main__":
