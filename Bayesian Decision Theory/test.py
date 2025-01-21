@@ -9,15 +9,19 @@ import numpy as np
 def create_likelihood(mean, std):
     return lambda x: norm.pdf(x, mean, std)
 
-def generate_test_data(n_samples, means, stds):
+def generate_test_data(n_samples, means, stds, priors):
     
     samples = []
-    for mean, std in zip(means, stds):
-        class_samples = np.random.normal(mean, std, n_samples)
+    labels = []
+
+    for i, (mean, std, prior) in enumerate(zip(means, stds, priors)):
+        n_class_samples = int(n_samples * prior)
+        class_samples = np.random.normal(mean, std, n_class_samples)
         samples.append(class_samples)
+        labels.append(np.ones(n_class_samples) * (i + 1))
     
     X = np.concatenate(samples)
-    y = np.concatenate([np.ones(n_samples) * (i + 1) for i in range(len(means))])
+    y = np.concatenate(labels)
     
     return X, y
 
@@ -31,7 +35,7 @@ def main():
     
     classifier = BayesianClassifier(likelihoods, priors)
     
-    X_test, y_test = generate_test_data(1000, means, stds)
+    X_test, y_test = generate_test_data(1000, means, stds, priors)
     
     # Evaluate Classifier:
     accuracy = classifier.evaluate_classifier(X_test, y_test)
