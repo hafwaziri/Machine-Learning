@@ -6,9 +6,9 @@ class BayesianClassifier:
     
     # Polychotomizer that uses Bayesian Decision Theory
     
-    def __init__(self, likelihoods, priors):
+    def __init__(self, likelihoods, priors, loss_matrix=None):
         
-        if not (0 <= prior <= 1 for prior in priors):
+        if not all(0 <= prior <= 1 for prior in priors):
             raise ValueError("Prior must be between 0 and 1")
         if not (sum(priors) == 1):
             raise ValueError("Priors must sum to 1")
@@ -18,6 +18,16 @@ class BayesianClassifier:
         self.likelihoods = likelihoods
         self.priors = priors
         self.num_classes = len(priors)
+        
+        # Default 0-1 Loss if loss_matrix not provided
+        if loss_matrix is None:
+            self.loss_matrix = np.zeros((self.num_classes, self.num_classes))
+            for i in range(self.num_classes):
+                for j in range(self.num_classes):
+                    if i != j:
+                        self.loss_matrix[i, j] = 1.0
+        else:
+            self.loss_matrix = loss_matrix
     
     # Overall Probability of x
     def evidence(self, x):
@@ -44,21 +54,44 @@ class BayesianClassifier:
 
         result, _ = quad(integrand, -np.inf, np.inf)
         return result
+    
+    def conditional_risk(self, x, action):
+        return sum(self.loss_matrix[action - 1, j] * self.posterior(x, j+1) for j in range(self.num_classes))
 
-    # Function to classify an observation based on Bayes Decision Rule (Eq (8) from Duda et el)
+    # Function to classify an observation based on conditional risk. If loss_matrix is zero one loss then its the same as Bayes Decision Rule (Eq (8) from Duda et el)
     #Tie breaker - choose class 1
     def classify(self, x):
         
+        risks = [self.conditional_risk(x, c) for c in range(1, self.num_classes + 1)]
+        
         posteriors = [self.posterior(x, c) for c in range(1, self.num_classes + 1)]
-        predicted_class = np.argmax(posteriors) + 1
-        sorted_posteriors = sorted(posteriors, reverse=True)
-        confidence = sorted_posteriors[0] - sorted_posteriors[1] if len(posteriors) > 1 else 1.0
+        predicted_class = np.argmin(risks) + 1
+        sorted_risks = sorted(risks)
+        if self.num_classes == 1:
+                confidence = 1.0
+        else:
+            if sorted_risks[0] == sorted_risks[1]:
+                confidence = 0.0
+            else:
+                confidence = sorted_risks[1] - sorted_risks[0]
         error = self.p_error_x(x)
         
         return predicted_class, confidence, error
     
     
+    # Function to calculate the minimum overall risk
+    def bayes_risk(self):
+        def integrand(x):
+            min_risk = min(self.conditional_risk(x,a) for a in range(1, self.num_classes + 1))
+            return min_risk * self.evidence(x)
+        
+        result, _ = quad(integrand, -np.inf, np.inf)
+        return result
+    
     def evaluate_classifier(self, x_test, y_true):
+        
+        if len(x_test) != len(y_true):
+            raise ValueError("X_test and y_true must have the same length.")
         
         predictions = [self.classify(x)[0] for x in x_test]
         
