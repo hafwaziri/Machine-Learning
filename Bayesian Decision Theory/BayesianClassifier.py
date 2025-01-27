@@ -28,6 +28,37 @@ class BayesianClassifier:
                         self.loss_matrix[i, j] = 1.0
         else:
             self.loss_matrix = loss_matrix
+            
+        # Threshold value for 2 category classification using likelihood rations
+        if self.num_classes == 2:
+            self.threshold = self._compute_threshold()
+    
+    
+    def _compute_threshold(self):
+        if self.num_classes != 2:
+            return ValueError("Threshold computation is only applicable for 2-category classification")
+        
+        lambda_11 = self.loss_matrix[0, 0]
+        lambda_12 = self.loss_matrix[0, 1]
+        lambda_21 = self.loss_matrix[1, 0]
+        lambda_22 = self.loss_matrix[1, 1]
+        
+        P_omega1 = self.priors[0]
+        P_omega2 = self.priors[1]
+        
+        threshold = ((lambda_12 - lambda_22) * P_omega2) / ((lambda_21 - lambda_11) * P_omega1)
+        return threshold
+    
+    def likelihood_ratio_decision_rule(self, x):
+        if self.num_classes != 2:
+            raise ValueError("This method is only for 2-Category Classification")
+        
+        likelihood_ratio = self.likelihoods[0](x) / self.likelihoods[1](x)
+        
+        if likelihood_ratio > self.threshold:
+            return 1
+        else:
+            return 2
     
     # Overall Probability of x
     def evidence(self, x):
