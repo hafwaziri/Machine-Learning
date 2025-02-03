@@ -18,9 +18,11 @@ class BayesianClassifier:
         self.likelihoods = likelihoods
         self.priors = priors
         self.num_classes = len(priors)
+        self.min_error_rate_classification = False
         
         # Default 0-1 Loss if loss_matrix not provided
         if loss_matrix is None:
+            self.min_error_rate_classification = True
             self.loss_matrix = np.zeros((self.num_classes, self.num_classes))
             for i in range(self.num_classes):
                 for j in range(self.num_classes):
@@ -86,7 +88,10 @@ class BayesianClassifier:
         result, _ = quad(integrand, -np.inf, np.inf)
         return result
     
+    #Incase of zero-one loss function the conditional risk is 1 - posterior of the correct class
     def conditional_risk(self, x, action):
+        if self.min_error_rate_classification == True:
+            return 1 - self.posterior(x, action)
         return sum(self.loss_matrix[action - 1, j] * self.posterior(x, j+1) for j in range(self.num_classes))
 
     # Function to classify an observation based on conditional risk. If loss_matrix is zero one loss then its the same as Bayes Decision Rule (Eq (8) from Duda et el)
@@ -147,6 +152,7 @@ class BayesianClassifier:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.savefig('likelihoods.png', bbox_inches='tight')
+        plt.show()
         plt.close()
         
     def plot_posteriors(self, range_):
@@ -165,4 +171,5 @@ class BayesianClassifier:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.savefig('posteriors.png', bbox_inches='tight')
+        plt.show()
         plt.close()
