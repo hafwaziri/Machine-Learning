@@ -38,7 +38,7 @@ class BayesianClassifier:
     
     def _compute_threshold(self):
         if self.num_classes != 2:
-            return ValueError("Threshold computation is only applicable for 2-category classification")
+            raise ValueError("Threshold computation is only applicable for 2-category classification")
         
         lambda_11 = self.loss_matrix[0, 0]
         lambda_12 = self.loss_matrix[0, 1]
@@ -94,22 +94,38 @@ class BayesianClassifier:
             return 1 - self.posterior(x, action)
         return sum(self.loss_matrix[action - 1, j] * self.posterior(x, j+1) for j in range(self.num_classes))
 
+    #Discriminant function for min-error-rate classification
+    def discriminant_function(self, x, c):
+        if not 1 <= c <= self.num_classes:
+            raise ValueError(f"Classes must be between 1 and {self.num_classes}")
+        
+        log_likelihood = np.log(self.likelihoods[c -1](x) + 1e-10)
+        log_prior = np.log(self.priors[c-1] + 1e-10)
+        
+        return log_likelihood + log_prior
+            
     # Function to classify an observation based on conditional risk. If loss_matrix is zero one loss then its the same as Bayes Decision Rule (Eq (8) from Duda et el)
     #Tie breaker - choose class 1
     def classify(self, x):
         
-        risks = [self.conditional_risk(x, c) for c in range(1, self.num_classes + 1)]
+        if self.min_error_rate_classification:
+            discriminant_values = [self.discriminant_function(x, c) for c in range(1, self.num_classes + 1)]
+            predicted_class = np.argmax(discriminant_values) + 1
+            sorted_values = sorted(discriminant_values, reverse=True)
+            confidence = sorted_values[0] - sorted_values[1]
+        else:
+            risks = [self.conditional_risk(x, c) for c in range(1, self.num_classes + 1)]    
+            predicted_class =  np.argmin(risks) + 1     
+            sorted_values = sorted(risks)
+            confidence = sorted_values[1] - sorted_values[0]
         
         posteriors = [self.posterior(x, c) for c in range(1, self.num_classes + 1)]
-        predicted_class = np.argmin(risks) + 1
-        sorted_risks = sorted(risks)
+        
         if self.num_classes == 1:
                 confidence = 1.0
         else:
-            if sorted_risks[0] == sorted_risks[1]:
+            if sorted_values[0] == sorted_values[1]:
                 confidence = 0.0
-            else:
-                confidence = sorted_risks[1] - sorted_risks[0]
         error = self.p_error_x(x)
         
         return predicted_class, confidence, error
